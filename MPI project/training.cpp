@@ -2,20 +2,21 @@
 #include <stdio.h>
 #include <cstdlib>
 #include <stdlib.h>
+#include <ctime>
 
-#define ROWS 10
-#define COLS 10
+#define ROWS 64
+#define COLS 128
 #define ROW_BALL_INIT_POS ROWS/2
 #define COL_BALL_INIT_POS COLS/2
-#define NUM_ROUNDS 1
-#define NUM_STEPS 3
+#define NUM_ROUNDS 15
+#define NUM_STEPS 10
 
 // position of a player shifts for 1 cell
 void make_step(int *my_position, int *ball_position);
 // player kicks the ball at random position
 void kick_ball(int *ball_position, int *new_ball_position);
 // returns the rank of a winner
-int who_is_winner(int players_positions[][2], int *ball_position, int numOfPlayers);
+int who_is_winner(int *players_positions, int *ball_position, int numOfPlayers);
 // in case of two or more winners returns the rank of a randomly chosen winner
 int random_winner(bool *winners, int numPlayers);
 
@@ -25,19 +26,22 @@ int main(int argc, char *argv[])  {
     MPI_Init(&argc,&argv);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &numtasks);
-    
+
+    // TODO: добавить недостающие данные, напр., количество побед
     int numOfPlayers = numtasks-1;
-    // TODO: rand() не работает, сука
+    srand(rank);
     int my_position[2] = {rand() % ROWS, rand() % COLS};
-    int ball_position[2] = {ROW_BALL_INIT_POS,COL_BALL_INIT_POS};
+    int ball_position[2] = {ROW_BALL_INIT_POS, COL_BALL_INIT_POS};
     // position of the ball after being kicked randomly
     // TODO: можно удалить и сделать ball_position
-    int new_ball_position[2] = {ROW_BALL_INIT_POS,COL_BALL_INIT_POS}; // has new coordinates of the ball [row,column]
-    int players_positions[numOfPlayers][2]; // coordinates of each player
+    int new_ball_position[2] = {ROW_BALL_INIT_POS, COL_BALL_INIT_POS}; // has new coordinates of the ball [row,column]
+    int players_positions[numOfPlayers * 2]; // coordinates of each player
     bool winner;
+    bool is_there_any_winner;
     int winner_index;
 
     for (int i = 0; i < NUM_ROUNDS; i++) {
+        is_there_any_winner = false;
         if (rank == 0) printf("ROUND %d, ball position - (%d,%d)\n", i+1, ball_position[0], ball_position[1]);
         MPI_Bcast(&ball_position, 2, MPI_INT, 0, MPI_COMM_WORLD);
 
@@ -46,15 +50,9 @@ int main(int argc, char *argv[])  {
             // ---------------- field's part
             if (rank == 0) {
                 for (int p = 1; p <= numOfPlayers; p++) {
-                    MPI_Recv(&(players_positions[p][0]), 2, MPI_INT, p, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                    MPI_Recv(&players_positions[(p-1)*2], 2, MPI_INT, p, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
                 }
-                winner_index = who_is_winner(players_positions, ball_position, numOfPlayers); // if '-1' is returned, no one becomes a winnner
-
-                for (int p = 1; p <= numOfPlayers; p++) {
-                    printf("    player %d, position (%d,%d)\n",p,players_positions[p-1][0],players_positions[p-1][1]);
-                }
-                
-                printf("index of the winner = %d\n",winner_index);
+                winner_index = who_is_winner(players_positions, ball_position, numOfPlayers); // if '-1', there is no winner
 
                 for (int p = 1; p <= numOfPlayers; p++) {
                     (p == winner_index) ? winner = true : winner = false;
@@ -62,10 +60,10 @@ int main(int argc, char *argv[])  {
                 }
 
                 if (winner_index != -1) {
+                    is_there_any_winner = true;
                     MPI_Recv(new_ball_position, 2, MPI_INT, winner_index, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
                     ball_position[0] = new_ball_position[0];
                     ball_position[1] = new_ball_position[1];
-                    break;
                 }
             }
 
@@ -79,17 +77,16 @@ int main(int argc, char *argv[])  {
                 MPI_Recv(&winner, 1, MPI_CXX_BOOL, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
                 if (winner) {
                     kick_ball(ball_position, new_ball_position);
-                    // TODO: может быть проблема с адресацией new_ball_position
                     MPI_Send(new_ball_position, 2, MPI_INT, 0, 0, MPI_COMM_WORLD);
                 }
             }
             MPI_Barrier(MPI_COMM_WORLD);
+            MPI_Bcast(&is_there_any_winner, 1, MPI_CXX_BOOL, 0, MPI_COMM_WORLD);
+            if (is_there_any_winner) break;
         }
     }
     MPI_Finalize();
 }
-
-
 
 
 void make_step(int *my_position, int *ball_position) {
@@ -117,11 +114,11 @@ void kick_ball(int *ball_position, int *new_ball_position) {
     new_ball_position[1] = new_col;
 }
 
-int who_is_winner(int players_positions[][2], int *ball_position, int numOfPlayers) {
+int who_is_winner(int *players_positions, int *ball_position, int numOfPlayers) {
     int count=0;
     bool winners[numOfPlayers];
     for (int i = 0; i < numOfPlayers; i++) {
-        if (players_positions[i][0] == ball_position[0] && players_positions[i][1] == ball_position[1]) {
+        if (players_positions[i*2] == ball_position[0] && players_positions[i*2+1] == ball_position[1]) {
             count++;
             winners[i] = true;
         }
