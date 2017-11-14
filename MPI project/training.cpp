@@ -1,9 +1,12 @@
+//TODO: удалить ненужные библиотеки
 #include "mpi.h"
 #include <stdio.h>
 #include <cstdlib>
 #include <stdlib.h>
 #include <ctime>
 #include <string.h>
+//#include "training.h"
+
 
 #define ROWS 64
 #define COLS 128
@@ -24,7 +27,6 @@ int who_is_winner(bool *playersReachedBall, int numOfPlayers);
 int random_winner(bool *winners, int numPlayers);
 void values_to_false(bool *arr, int n);
 
-// TODO: прокомментировать всю стратегию
 int main(int argc, char *argv[])  {
     int rank, numtasks;
     MPI_Init(&argc,&argv);
@@ -40,16 +42,16 @@ int main(int argc, char *argv[])  {
     int kickedBall=0;
     bool winner;
     bool isThereAnyWinner;
-    srand(rank);
     int players_meters[numOfPlayers+1];
     bool playersReachedBall[numOfPlayers];
     bool players_won_ball[numOfPlayers];
     int times_reached_ball[numOfPlayers+1];
     int times_won_ball[numOfPlayers+1];
+    srand(rank);
     int my_position[2] = {rand() % ROWS, rand() % COLS};
     int ball_position[2] = {ROW_BALL_INIT_POS, COL_BALL_INIT_POS};
     int new_ball_position[2] = {ROW_BALL_INIT_POS, COL_BALL_INIT_POS}; // has new coordinates of the ball [row,column]
-    int initial_players_positions[(numOfPlayers+1) * 2]; //ибо нехуй было тупить
+    int initial_players_positions[(numOfPlayers+1) * 2];
     int players_positions[(numOfPlayers+1) * 2]; // coordinates of each player
 
     values_to_false(playersReachedBall, numOfPlayers);
@@ -119,6 +121,7 @@ int main(int argc, char *argv[])  {
 
         if (rank == 0) {
             for (int l = 0; l < numOfPlayers; l++) {
+                // TODO: убрать скобки, выводить координаты along long axis first
                 printf("%d (%d,%d) (%d,%d) %d %d %d %d %d\n",l,initial_players_positions[(l+1)*2],initial_players_positions[(l+1)*2+1],players_positions[(l+1)*2],players_positions[(l+1)*2+1],playersReachedBall[l],players_won_ball[l],players_meters[l+1],times_reached_ball[l+1],times_won_ball[l+1]);
             }
 
@@ -132,7 +135,6 @@ int main(int argc, char *argv[])  {
     }
     MPI_Finalize();
 }
-
 
 
 void make_step(int *my_position, int *ball_position, int &metersTotal) {
