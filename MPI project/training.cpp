@@ -67,6 +67,7 @@ int main(int argc, char *argv[])  {
         isThereAnyWinner = false;
         MPI_Bcast(&ball_position, 2, MPI_INT, 0, MPI_COMM_WORLD);
 
+        //TODO: можно вообще обойтись без loop'а
         for (int j = 0; j < NUM_STEPS; j++) {
 
             // ---------------- field's part
