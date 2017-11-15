@@ -22,22 +22,25 @@ bool is_ball_im_my_borders(int *myBorders, int *ballPosition);
 int get_field_index_with_ball(bool *ballPossessionIndex);
 
 int main(int argc, char *argv[])  {
-    int rank, numtasks;
-    int speed,dribbling, kickPower;
+    int count=0;
+    int rank, rankA=-1, rankB=-1, rankAF=-1, rankBF=-1, numtasks;
+    int speed, dribbling, kickPower;
     bool IGotBall = false;
     int fieldWithBallIndex = -1;
     int myBoarders[4];
-    int teamA[NUM_Players];// = {0,1,2,3,4,5,6,7,8,9};
+    int teamA[NUM_Players];
+//    int teamA[] = {0,1,2,3,4,5,6,7,8,9};
     int teamB[NUM_Players];// = {10,11,12,13,14,15,16,17,18,19};
     int teamAandFields[NUM_Players+NUM_Fields];// = {0,1,2,3,4,5,6,7,8,9,20,21,22,23,24,25,26,27,28,29,30,31};
     int teamBandFields[NUM_Players+NUM_Fields];// = {10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31};
     int ballPosition[2] = {ROW_BALL_INIT_POS, COL_BALL_INIT_POS};
     bool ballPossessionIndex[NUM_Players+NUM_Fields];
     
+    
     MPI_Init(&argc,&argv);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &numtasks);
-    
+
     MPI_Group world_group, teamA_group, teamB_group, teamAandFields_group, teamBandFields_group;
     MPI_Comm teamA_COMM, teamB_COMM, teamAandFields_COMM, teamBandFields_COMM;
 
@@ -47,48 +50,74 @@ int main(int argc, char *argv[])  {
     fill_ranks(teamBandFields, 3);
 
     MPI_Comm_group(MPI_COMM_WORLD, &world_group);
+    
     MPI_Group_incl(world_group, NUM_Players, teamA, &teamA_group);
     MPI_Group_incl(world_group, NUM_Players, teamB, &teamB_group);
-    MPI_Group_incl(world_group, NUM_Players+NUM_Fields, teamAandFields, &teamAandFields_group);
-    MPI_Group_incl(world_group, NUM_Players+NUM_Fields, teamBandFields, &teamBandFields_group);
+    MPI_Group_incl(world_group, NUM_Players + NUM_Fields, teamAandFields, &teamAandFields_group);
+    MPI_Group_incl(world_group, NUM_Players + NUM_Fields, teamBandFields, &teamBandFields_group);
     MPI_Comm_create(MPI_COMM_WORLD, teamA_group, &teamA_COMM);
     MPI_Comm_create(MPI_COMM_WORLD, teamB_group, &teamB_COMM);
     MPI_Comm_create(MPI_COMM_WORLD, teamAandFields_group, &teamAandFields_COMM);
     MPI_Comm_create(MPI_COMM_WORLD, teamBandFields_group, &teamBandFields_COMM);
-
-    if (rank < 22)
-        assign_skills(speed, dribbling, kickPower, rank);
-    if (rank >= 22) {
-        assign_boarders(myBoarders, rank);
-    }
-
-
-    // FOR LOOP
-
-
-    if (rank >= 22)
-        IGotBall = is_ball_im_my_borders(myBoarders, ballPosition);
-    //можно и teamBandFields_COMM использовать, в данном случае разницы нет
-    //TODO: IGotBall надо обнулять в конце раунда !!!
-    MPI_Allgather(&IGotBall, 1, MPI_CXX_BOOL, ballPossessionIndex, 1, MPI_CXX_BOOL, teamAandFields_COMM);
-    MPI_Allgather(&IGotBall, 1, MPI_CXX_BOOL, ballPossessionIndex, 1, MPI_CXX_BOOL, teamBandFields_COMM);
-
-    if (rank >= 22)
-        fieldWithBallIndex = get_field_index_with_ball(ballPossessionIndex);
-    if (rank == fieldWithBallIndex) {
-        printf("ball was at position (%d,%d)\n",ballPosition[0], ballPosition[1]);
-        ballPosition[0]=33;
-        ballPosition[1]=33;
-    }
-
-    MPI_Bcast(ballPosition, 2, MPI_INT, fieldWithBallIndex, teamAandFields_COMM);
-    MPI_Bcast(ballPosition, 2, MPI_INT, fieldWithBallIndex, teamBandFields_COMM);
-
-    if (rank==3)
-        printf("I'm player [%d] and I know that ball is at (%d,%d) position\n",rank,ballPosition[0],ballPosition[1]);
     
-  
+    if(teamA_COMM != MPI_COMM_NULL)
+        MPI_Comm_rank(teamA_COMM, &rankA);
+    if(teamB_COMM != MPI_COMM_NULL)
+        MPI_Comm_rank(teamB_COMM, &rankB);
+    if(teamAandFields_COMM != MPI_COMM_NULL)
+        MPI_Comm_rank(teamAandFields_COMM, &rankAF);
+    if(teamBandFields_COMM != MPI_COMM_NULL)
+        MPI_Comm_rank(teamBandFields_COMM, &rankBF);
+    
+    
+
+    
+
+
+
+
+    
+//    if (rank < 22)
+//        assign_skills(speed, dribbling, kickPower, rank);
+//    if (rank >= 22) {
+//        assign_boarders(myBoarders, rank);
+//    }
+//
+//
+//    // FOR LOOP
+//
+//
+//    if (rank >= 22)
+//        IGotBall = is_ball_im_my_borders(myBoarders, ballPosition);
+//    //можно и teamBandFields_COMM использовать, в данном случае разницы нет
+//    //TODO: IGotBall надо обнулять в конце раунда !!!
+//    MPI_Allgather(&IGotBall, 1, MPI_CXX_BOOL, ballPossessionIndex, 1, MPI_CXX_BOOL, teamAandFields_COMM);
+////    MPI_Allgather(&IGotBall, 1, MPI_CXX_BOOL, ballPossessionIndex, 1, MPI_CXX_BOOL, teamBandFields_COMM);
+//
+//    if (rank >= 22)
+//        fieldWithBallIndex = get_field_index_with_ball(ballPossessionIndex);
+//    if (rankAF == fieldWithBallIndex) {
+//        printf("ball was at position (%d,%d)\n",ballPosition[0], ballPosition[1]);
+//        ballPosition[0]=33;
+//        ballPosition[1]=33;
+//    }
+//
+//    MPI_Bcast(ballPosition, 2, MPI_INT, rankAF, teamAandFields_COMM);
+//    MPI_Bcast(ballPosition, 2, MPI_INT, rankBF, teamBandFields_COMM);
+//
+//    if (rank==3)
+//        printf("I'm player [%d] and I know that ball is at (%d,%d) position\n",rank,ballPosition[0],ballPosition[1]);
+
+
     //TODO: освободить память из-под коммуникаторов
+//    if(comm_a != MPI_COMM_NULL)
+//        MPI_Comm_free(&comm_a);
+//    if(comm_b != MPI_COMM_NULL)
+//        MPI_Comm_free(&comm_b);
+//    MPI_Group_free(&group_a);
+//    MPI_Group_free(&group_b);
+//    MPI_Group_free(&MPI_GROUP_WORLD);
+
     MPI_Finalize();
 }
 

@@ -5,45 +5,59 @@
 #include <ctime>
 #include <string.h>
 
-using namespace std;
 int main(int argc, char *argv[])
 {
+    int rank, ma, mb;
+    MPI_Group MPI_GROUP_WORLD, group_a, group_b;
+    MPI_Comm comm_a, comm_b;
     
-//    int myid, numprocs;
-//    int color, broad_val, new_id, new_nodes;
-//    MPI_Comm New_Comm;
-//    MPI_Init(&argc, &argv);
-//    MPI_Comm_size(MPI_COMM_WORLD, &numprocs);
-//    MPI_Comm_rank(MPI_COMM_WORLD, &myid);
-//    color = myid%2;
-//    MPI_Comm_split(MPI_COMM_WORLD, color, myid, &New_Comm);
-//    MPI_Comm_rank(New_Comm, &new_id);
-//    MPI_Comm_size(New_Comm, &new_nodes);
-//
-//    if(new_id == 0) broad_val = color;
-//    MPI_Bcast(&broad_val, 1, MPI_INT, 0, New_Comm);
-//    printf("Old_proc[%d] has new rank %d, received value %d\n",myid,new_id,broad_val);
-//    MPI_Finalize();
+    MPI_Init(&argc, &argv);
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_group(MPI_COMM_WORLD, &MPI_GROUP_WORLD);
+    
+    static int list_a[] = {0, 1};
+    static int list_b[] = {0, 2 ,3};
+    
+    int size_list_a = sizeof(list_a)/sizeof(int);
+    int size_list_b = sizeof(list_b)/sizeof(int);
     
     
-    
-    //    if (rank < 11) {
-    //        color = 0;
-    //        MPI_Comm_split(MPI_COMM_WORLD, color, rank, &MyTeam_COMM);
-    //        MPI_Comm_split(MPI_COMM_WORLD, color, rank, &teamAandFields_COMM);
-    //    }
-    //    else if (rank >= 11 && rank < 22) {
-    //        color = 1;
-    //        MPI_Comm_split(MPI_COMM_WORLD, color, rank, &MyTeam_COMM);
-    //        MPI_Comm_split(MPI_COMM_WORLD, color, rank, &teamBandFields_COMM);
-    //    }
-    //    else {
-    //        color = 0;
-    //        MPI_Comm_split(MPI_COMM_WORLD, color, rank, &teamAandFields_COMM);
-    //        color = 1;
-    //        MPI_Comm_split(MPI_COMM_WORLD, color, rank, &teamBandFields_COMM);
-    //    }
+    MPI_Group_incl(MPI_GROUP_WORLD, size_list_a, list_a, &group_a);
+    MPI_Group_incl(MPI_GROUP_WORLD, size_list_b, list_b, &group_b);
     
     
+    MPI_Comm_create(MPI_COMM_WORLD, group_a, &comm_a);
+    MPI_Comm_create(MPI_COMM_WORLD, group_b, &comm_b);
+    
+    
+    if(comm_a != MPI_COMM_NULL)
+        MPI_Comm_rank(comm_a, &ma);
+    if(comm_b != MPI_COMM_NULL)
+        MPI_Comm_rank(comm_b, &mb);
+    
+//    if(comm_b != MPI_COMM_NULL) {
+    printf("Old rank [%d], new rank [%d]\n",rank,mb);
+//    }
+    
+    MPI_Finalize();
     
 }
+
+//    if (rank < 11) {
+//        color = 0;
+//        MPI_Comm_split(MPI_COMM_WORLD, color, rank, &MyTeam_COMM);
+//        MPI_Comm_split(MPI_COMM_WORLD, color, rank, &teamAandFields_COMM);
+//    }
+//    else if (rank >= 11 && rank < 22) {
+//        color = 1;
+//        MPI_Comm_split(MPI_COMM_WORLD, color, rank, &MyTeam_COMM);
+//        MPI_Comm_split(MPI_COMM_WORLD, color, rank, &teamBandFields_COMM);
+//    }
+//    else {
+//        color = 0;
+//        MPI_Comm_split(MPI_COMM_WORLD, color, rank, &teamAandFields_COMM);
+//        color = 1;
+//        MPI_Comm_split(MPI_COMM_WORLD, color, rank, &teamBandFields_COMM);
+//    }
+
+
