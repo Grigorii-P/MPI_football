@@ -7,11 +7,11 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		E8159FAC1FBF4D4F00979871 /* libmpi_mpifh.40.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = E8E3C3621FB5CAB500F887AB /* libmpi_mpifh.40.dylib */; };
+		E8159FAD1FBF4D6000979871 /* libmpi.40.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = E8E3C3601FB5CA8B00F887AB /* libmpi.40.dylib */; };
 		E85DFA021FBAB1C2008BD08B /* draft.cpp in Sources */ = {isa = PBXBuildFile; fileRef = E85DFA011FBAB1C2008BD08B /* draft.cpp */; };
 		E8A3FAB81FB9C331009C5CB6 /* match.cpp in Sources */ = {isa = PBXBuildFile; fileRef = E8A3FAB61FB9C331009C5CB6 /* match.cpp */; };
 		E8E3C3591FB58E2F00F887AB /* training.cpp in Sources */ = {isa = PBXBuildFile; fileRef = E8E3C3581FB58E2F00F887AB /* training.cpp */; };
-		E8E3C3611FB5CA8B00F887AB /* libmpi.40.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = E8E3C3601FB5CA8B00F887AB /* libmpi.40.dylib */; };
-		E8E3C3631FB5CAB500F887AB /* libmpi_mpifh.40.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = E8E3C3621FB5CAB500F887AB /* libmpi_mpifh.40.dylib */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -42,8 +42,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				E8E3C3631FB5CAB500F887AB /* libmpi_mpifh.40.dylib in Frameworks */,
-				E8E3C3611FB5CA8B00F887AB /* libmpi.40.dylib in Frameworks */,
+				E8159FAD1FBF4D6000979871 /* libmpi.40.dylib in Frameworks */,
+				E8159FAC1FBF4D4F00979871 /* libmpi_mpifh.40.dylib in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
