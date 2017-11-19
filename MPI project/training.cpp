@@ -1,4 +1,3 @@
-//TODO: нельзя использовать collective communication
 #include "mpi.h"
 #include <stdio.h>
 #include <cstdlib>
@@ -24,6 +23,7 @@ bool did_reach_ball(int *my_position, int *ball_position);
 int who_is_winner(bool *playersReachedBall, int numOfPlayers);
 // in case of two or more winners returns the rank of a randomly chosen winner
 int random_winner(bool *winners, int numPlayers);
+void values_to_zero(int *arr, int n);
 void values_to_false(bool *arr, int n);
 
 int main(int argc, char *argv[])  {
@@ -32,7 +32,6 @@ int main(int argc, char *argv[])  {
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &numtasks);
 
-    // TODO: заменить '_' в названиях переменных на большие буквы, но следи, чтоб имена не пересеклись
     int numOfPlayers = numtasks-1;
     int winnerIndex=-1;
     int metersTotal=0;
@@ -49,39 +48,55 @@ int main(int argc, char *argv[])  {
     srand(rank);
     int my_position[2] = {rand() % ROWS, rand() % COLS};
     int ball_position[2] = {ROW_BALL_INIT_POS, COL_BALL_INIT_POS};
-    int new_ball_position[2] = {ROW_BALL_INIT_POS, COL_BALL_INIT_POS}; // has new coordinates of the ball [row,column]
-    int initial_players_positions[(numOfPlayers+1) * 2];
-    int players_positions[(numOfPlayers+1) * 2]; // coordinates of each player
+    int new_ball_position[2] = {ROW_BALL_INIT_POS, COL_BALL_INIT_POS};
+    int initial_players_positions[numOfPlayers * 2];
+    int players_positions[numOfPlayers * 2];
 
+    values_to_zero(initial_players_positions, numOfPlayers * 2);
     values_to_false(playersReachedBall, numOfPlayers);
     values_to_false(players_won_ball, numOfPlayers);
     
+    if (rank == 0) {
+        freopen ("output_training.txt","w",stdout);
+    }
+    
     for (int i = 0; i < NUM_ROUNDS; i++) {
         
-        MPI_Gather(my_position, 2, MPI_INT, initial_players_positions, 2, MPI_INT, 0, MPI_COMM_WORLD);
+        if (rank != 0)
+            MPI_Send(my_position, 2, MPI_INT, 0, 0, MPI_COMM_WORLD);
         if (rank == 0) {
-            printf("round - %d\n", i+1);
-            printf("ball - %d,%d\n", ball_position[0], ball_position[1]);
+            for (int p = 0; p < numOfPlayers; p++) {
+                MPI_Recv(&initial_players_positions[p*2], 2, MPI_INT, p+1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+            }
+        }
+        
+        if (rank == 0) {
+            printf("%d\n", i+1);
+            printf("%d %d\n", ball_position[1], ball_position[0]);
         }
         isThereAnyWinner = false;
-        MPI_Bcast(&ball_position, 2, MPI_INT, 0, MPI_COMM_WORLD);
+        
+        if (rank == 0) {
+            for (int p = 0; p < numOfPlayers; p++) {
+                MPI_Send(ball_position, 2, MPI_INT, p+1, 0, MPI_COMM_WORLD);
+            }
+        }
+        if (rank != 0) {
+            MPI_Recv(ball_position, 2, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        }
 
-        //TODO: можно вообще обойтись без loop'а
         for (int j = 0; j < NUM_STEPS; j++) {
 
             // ---------------- field's part
             if (rank == 0) {
                 for (int p = 1; p <= numOfPlayers; p++) {
-                    MPI_Recv(&players_positions[(p-1)*2], 2, MPI_INT, p, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
                     MPI_Recv(&playersReachedBall[p-1], 1, MPI_C_BOOL, p, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-//                    MPI_Recv(&playersReachedBall[p-1], 1, MPI_CXX_BOOL, p, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
                 }
                 winnerIndex = who_is_winner(playersReachedBall ,numOfPlayers); // if '-1', there is no winner
 
                 for (int p = 0; p < numOfPlayers; p++) {
                     (p == winnerIndex) ? winner = true : winner = false;
                     MPI_Send(&winner, 1, MPI_C_BOOL, p+1, 0, MPI_COMM_WORLD);
-//                    MPI_Send(&winner, 1, MPI_CXX_BOOL, p+1, 0, MPI_COMM_WORLD);
                 }
 
                 if (winnerIndex != -1) {
@@ -91,43 +106,48 @@ int main(int argc, char *argv[])  {
                     ball_position[0] = new_ball_position[0];
                     ball_position[1] = new_ball_position[1];
                 }
+                for (int p = 0; p < numOfPlayers; p++) {
+                    MPI_Recv(&players_meters[p], 1, MPI_INT, p+1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                    MPI_Recv(&times_reached_ball[p], 1, MPI_INT, p+1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                    MPI_Recv(&times_won_ball[p], 1, MPI_INT, p+1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                    MPI_Recv(&players_positions[p*2], 2, MPI_INT, p+1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                }
+                // to avoid deadlock, put it in a separate loop
+                for (int p = 0; p < numOfPlayers; p++) {
+                    MPI_Send(&isThereAnyWinner, 1, MPI_C_BOOL, p+1, 0, MPI_COMM_WORLD);
+                }
             }
 
             // ---------------- players' part
             if (rank != 0) {
                 make_step(my_position, ball_position, metersTotal);
-                MPI_Send(my_position, 2, MPI_INT, 0, 0, MPI_COMM_WORLD);
                 bool gotBall = false;
                 if ((gotBall = did_reach_ball(my_position, ball_position))) {
                     timesReachedBall++;
                 }
                 MPI_Send(&gotBall, 1, MPI_C_BOOL, 0, 0, MPI_COMM_WORLD);
                 MPI_Recv(&winner, 1, MPI_C_BOOL, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-//                MPI_Send(&gotBall, 1, MPI_CXX_BOOL, 0, 0, MPI_COMM_WORLD);
-//                MPI_Recv(&winner, 1, MPI_CXX_BOOL, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
                 if (winner) {
                     timesWonBall++;
                     kick_ball(ball_position, new_ball_position);
                     MPI_Send(new_ball_position, 2, MPI_INT, 0, 0, MPI_COMM_WORLD);
                     kickedBall++;
                 }
+                MPI_Send(&metersTotal, 1, MPI_INT, 0, 0, MPI_COMM_WORLD);
+                MPI_Send(&timesReachedBall, 1, MPI_INT, 0, 0, MPI_COMM_WORLD);
+                MPI_Send(&timesWonBall, 1, MPI_INT, 0, 0, MPI_COMM_WORLD);
+                MPI_Send(my_position, 2, MPI_INT, 0, 0, MPI_COMM_WORLD);
             }
-            // TODO: проверить, нужен ли здесь барьер
+            if (rank != 0)
+                MPI_Recv(&isThereAnyWinner, 1, MPI_C_BOOL, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+            
             MPI_Barrier(MPI_COMM_WORLD);
-            MPI_Bcast(&isThereAnyWinner, 1, MPI_C_BOOL, 0, MPI_COMM_WORLD);
-//            MPI_Bcast(&isThereAnyWinner, 1, MPI_CXX_BOOL, 0, MPI_COMM_WORLD);
             if (isThereAnyWinner) break;
         }
 
-        MPI_Gather(&metersTotal, 1, MPI_INT, players_meters, 1, MPI_INT, 0, MPI_COMM_WORLD);
-        MPI_Gather(&timesReachedBall, 1, MPI_INT, times_reached_ball, 1, MPI_INT, 0, MPI_COMM_WORLD);
-        MPI_Gather(&timesWonBall, 1, MPI_INT, times_won_ball, 1, MPI_INT, 0, MPI_COMM_WORLD);
-        MPI_Gather(my_position, 2, MPI_INT, players_positions, 2, MPI_INT, 0, MPI_COMM_WORLD);
-
         if (rank == 0) {
             for (int l = 0; l < numOfPlayers; l++) {
-                // TODO: убрать скобки, выводить координаты along long axis first
-                printf("%d (%d,%d) (%d,%d) %d %d %d %d %d\n",l,initial_players_positions[(l+1)*2],initial_players_positions[(l+1)*2+1],players_positions[(l+1)*2],players_positions[(l+1)*2+1],playersReachedBall[l],players_won_ball[l],players_meters[l+1],times_reached_ball[l+1],times_won_ball[l+1]);
+                printf("%d %d %d %d %d %d %d %d %d %d\n",l,initial_players_positions[l*2+1],initial_players_positions[l*2],players_positions[l*2+1],players_positions[l*2],playersReachedBall[l],players_won_ball[l],players_meters[l],times_reached_ball[l],times_won_ball[l]);
             }
 
             for (int j = 0; j < numOfPlayers; j++) {
@@ -138,6 +158,9 @@ int main(int argc, char *argv[])  {
             }
         }
     }
+    
+    fclose (stdout);
+    
     MPI_Finalize();
 }
 
@@ -206,6 +229,12 @@ int random_winner(bool *winners, int numOfPlayers) {
     while (true) {
         i = rand() % numOfPlayers;
         if (winners[i] == true) return i;
+    }
+}
+
+void values_to_zero(int *arr, int n) {
+    for (int i=0; i < n; i++) {
+        arr[i] = 0;
     }
 }
 

@@ -1,4 +1,3 @@
-//MARK: комментить непрокомментенное
 #include "mpi.h"
 #include <stdio.h>
 #include <cstdlib>
@@ -23,17 +22,29 @@
 #define HALF 2
 #define ROUNDS 2700
 
+// assign process indexes for new communicators
 void fill_ranks(int *newRanks, int flag);
+// assign initial players' positions
 void assign_position(int *myPosition, int *myFieldSector, int rank, bool checkTeam, int half);
+// assign players' skills
 void assign_skills(int &speed, int &dribbling, int &kickPower, int rank);
+// assign fields borders
 void assign_borders(int *myBoarders, int rank);
+// check if ball is inside of a particular rectangle
 bool is_ball_in_my_borders(int *myBorders, int *ballPosition);
+// get a field index once you know who of the fields owns a ball (has it inside his borders)
 int get_field_index_with_ball(bool *ballPossessionIndex);
+// if ball is in player's football field section then the player runs towards the ball, otherwise he stays where he stayed
 void make_step(int *myPosition, int *myFieldSector, int speed, int *ballPosition);
+// a field identifies a winner once it knows positions of all the players and the ball position
 void identify_winner(int *allPlayersPositions_A, int *allPlayersPositions_B, int *ballPosition, int *winner, bool *reachedBall_A, bool *reachedBall_B);
+// if there are more than one players reached the ball - choose the winner between them randomly
 void choose_winner(int *ballChallengeA, int *ballChallengeB, int *winner, bool *wonBall_A, bool *wonBall_B);
+// players calculate if they won the ball
 bool did_win_ball(int *winner, int rank, int checkTeam);
+// kick the ball towards a goalpost or a teammate
 void kick_ball(int *ballPosition, int *myPosition, int *myFieldSector, int *allPlayersPositions, int goalXcoord, int *newBallPosition, int kickPower);
+// assign the ball position for the next round
 void get_ball_position(int *newBallPositionsA, int *newBallPositionsB, int *ballPosition);
 void setToZeroBool(bool *a, int n);
 void setToZeroInt(int *a, int n);
@@ -56,7 +67,7 @@ int main(int argc, char *argv[])  {
     int ballPosition[2] = {ROW_BALL_INIT_POS, COL_BALL_INIT_POS};
     int newBallPosition[] = {-1, -1}, newBallPositionsA[NUM_AB_and_F * 2], newBallPositionsB[NUM_AB_and_F * 2];
     int allPlayersPositions_A[NUM_AB_and_F * 2], allPlayersPositions_B[NUM_AB_and_F * 2];
-    int winner[3]; // [0] - team/index, [1] - index, [3] - if battle (0/1)
+    int winner[3];
     int ballChallengeA[NUM_AB_and_F], ballChallengeB[NUM_AB_and_F];
     int initialPlayersPositionsA[NUM_AB_and_F * 2], initialPlayersPositionsB[NUM_AB_and_F * 2];
     bool ballPossessionIndex[NUM_AB_and_F];
@@ -105,7 +116,6 @@ int main(int argc, char *argv[])  {
     if (rank >= NUM_Players * 2)
         assign_borders(myBorders, rank);
     
-    // MARK: freopen
     if (rank == NUM_Players * 2) {
         freopen ("output.txt","w",stdout);
     }
@@ -119,7 +129,7 @@ int main(int argc, char *argv[])  {
             if (rankB != -1)
                 assign_position(myPosition, myFieldSector, rankB, checkTeam, j);
             
-            // choose a goal for each team
+            // choose a goalpost for each team
             if (checkTeam && j == 0)
                 goalXcoord = goalCoordX2;
             if (checkTeam && j == 1)
@@ -155,10 +165,8 @@ int main(int argc, char *argv[])  {
             // fields and players collect info on who possesses the ball
             if (teamAandFields_COMM != MPI_COMM_NULL)
                 MPI_Allgather(&IGotBall, 1, MPI_C_BOOL, ballPossessionIndex, 1, MPI_C_BOOL, teamAandFields_COMM);
-//                MPI_Allgather(&IGotBall, 1, MPI_CXX_BOOL, ballPossessionIndex, 1, MPI_CXX_BOOL, teamAandFields_COMM);
             if (teamBandFields_COMM != MPI_COMM_NULL)
                 MPI_Allgather(&IGotBall, 1, MPI_C_BOOL, ballPossessionIndex, 1, MPI_C_BOOL, teamBandFields_COMM);
-//                MPI_Allgather(&IGotBall, 1, MPI_CXX_BOOL, ballPossessionIndex, 1, MPI_CXX_BOOL, teamBandFields_COMM);
             
             // players receive the rank of a field with the ball
             if (rankAF != -1)
@@ -216,10 +224,6 @@ int main(int argc, char *argv[])  {
             }
             
             // send 'winners' arrays so that each player can detect if he is a winner; FP0 is 'NUM_Players'
-//            if (teamAandFields_COMM != MPI_COMM_NULL)
-//                MPI_Bcast(winner, NUM_Players, MPI_CXX_BOOL, NUM_Players, teamAandFields_COMM);
-//            if (teamBandFields_COMM != MPI_COMM_NULL)
-//                MPI_Bcast(winner, NUM_Players, MPI_CXX_BOOL, NUM_Players, teamBandFields_COMM);
             if (teamAandFields_COMM != MPI_COMM_NULL)
                 MPI_Bcast(winner, NUM_Players, MPI_C_BOOL, NUM_Players, teamAandFields_COMM);
             if (teamBandFields_COMM != MPI_COMM_NULL)
@@ -278,7 +282,7 @@ int main(int argc, char *argv[])  {
         }
     }
     // END OF THE MATCH
-    // MARK: fclose
+    
     fclose (stdout);
     
     // lets free groups and communicators
@@ -363,7 +367,7 @@ void assign_position(int *myPosition, int *myFieldSector, int rank, bool checkTe
     else if (rank < 10)
         row_shift = 4;
     
-    // MARK: версия для 10 игроков
+    // MARK: 10 players mode
 //    myPosition[0] = row_shift * 19;
 //    myFieldSector[0] = myPosition[0];
 //    myFieldSector[1] = myPosition[0] + (19-1);
@@ -393,7 +397,7 @@ void assign_position(int *myPosition, int *myFieldSector, int rank, bool checkTe
 //        myFieldSector[3] = myFieldSector[2] + 65;
 //    }
     
-    // MARK: версия для 11 игроков
+    // MARK: 11 players mode
     if (rank != 10) {
         myPosition[0] = row_shift * 19;
         myPosition[1] = col_shift * 57 + shift;
