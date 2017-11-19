@@ -75,15 +75,15 @@ int main(int argc, char *argv[])  {
             if (rank == 0) {
                 for (int p = 1; p <= numOfPlayers; p++) {
                     MPI_Recv(&players_positions[(p-1)*2], 2, MPI_INT, p, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-                    MPI_Recv(&playersReachedBall[p-1], 1, MPI_INT, p, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-//                    MPI_Recv(&playersReachedBall[p-1], 1, MPI_CXX_BOOL, p, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+//                    MPI_Recv(&playersReachedBall[p-1], 1, MPI_INT, p, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                    MPI_Recv(&playersReachedBall[p-1], 1, MPI_CXX_BOOL, p, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
                 }
                 winnerIndex = who_is_winner(playersReachedBall ,numOfPlayers); // if '-1', there is no winner
 
                 for (int p = 0; p < numOfPlayers; p++) {
                     (p == winnerIndex) ? winner = true : winner = false;
-                    MPI_Send(&winner, 1, MPI_INT, p+1, 0, MPI_COMM_WORLD);
-//                    MPI_Send(&winner, 1, MPI_CXX_BOOL, p+1, 0, MPI_COMM_WORLD);
+//                    MPI_Send(&winner, 1, MPI_INT, p+1, 0, MPI_COMM_WORLD);
+                    MPI_Send(&winner, 1, MPI_CXX_BOOL, p+1, 0, MPI_COMM_WORLD);
                 }
 
                 if (winnerIndex != -1) {
@@ -103,10 +103,10 @@ int main(int argc, char *argv[])  {
                 if ((gotBall = did_reach_ball(my_position, ball_position))) {
                     timesReachedBall++;
                 }
-                MPI_Send(&gotBall, 1, MPI_INT, 0, 0, MPI_COMM_WORLD);
-                MPI_Recv(&winner, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-//                MPI_Send(&gotBall, 1, MPI_CXX_BOOL, 0, 0, MPI_COMM_WORLD);
-//                MPI_Recv(&winner, 1, MPI_CXX_BOOL, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+//                MPI_Send(&gotBall, 1, MPI_INT, 0, 0, MPI_COMM_WORLD);
+//                MPI_Recv(&winner, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                MPI_Send(&gotBall, 1, MPI_CXX_BOOL, 0, 0, MPI_COMM_WORLD);
+                MPI_Recv(&winner, 1, MPI_CXX_BOOL, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
                 if (winner) {
                     timesWonBall++;
                     kick_ball(ball_position, new_ball_position);
@@ -116,8 +116,8 @@ int main(int argc, char *argv[])  {
             }
             // TODO: проверить, нужен ли здесь барьер
             MPI_Barrier(MPI_COMM_WORLD);
-            MPI_Bcast(&isThereAnyWinner, 1, MPI_INT, 0, MPI_COMM_WORLD);
-//            MPI_Bcast(&isThereAnyWinner, 1, MPI_CXX_BOOL, 0, MPI_COMM_WORLD);
+//            MPI_Bcast(&isThereAnyWinner, 1, MPI_INT, 0, MPI_COMM_WORLD);
+            MPI_Bcast(&isThereAnyWinner, 1, MPI_CXX_BOOL, 0, MPI_COMM_WORLD);
             if (isThereAnyWinner) break;
         }
 
