@@ -134,6 +134,14 @@ int main(int argc, char *argv[])  {
         ballPosition[1] = COL_BALL_INIT_POS;
         
         for (int i = 0; i < ROUNDS; i++) {
+            
+            if (rank == NUM_Players * 2) {
+                setToZeroBool(reachedBall_A, NUM_Players);
+                setToZeroBool(reachedBall_B, NUM_Players);
+                setToZeroBool(wonBall_A, NUM_Players);
+                setToZeroBool(wonBall_B, NUM_Players);
+            }
+            
             // FP0 gathers initial players' positions
             if (teamAandFields_COMM != MPI_COMM_NULL)
                 MPI_Gather(myPosition, 2, MPI_INT, initialPlayersPositionsA, 2, MPI_INT, NUM_Players, teamAandFields_COMM);
@@ -266,12 +274,7 @@ int main(int argc, char *argv[])  {
                 }
             }
 
-            if (rank == NUM_Players * 2) {
-                setToZeroBool(reachedBall_A, NUM_Players);
-                setToZeroBool(reachedBall_B, NUM_Players);
-                setToZeroBool(wonBall_A, NUM_Players);
-                setToZeroBool(wonBall_B, NUM_Players);
-            }
+            
         }
     }
     // END OF THE MATCH
