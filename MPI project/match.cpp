@@ -14,7 +14,7 @@
 #define NUM_ROUNDS 5
 #define NUM_STEPS 10
 #define NUM_Fields 12
-#define NUM_Players 10
+#define NUM_Players 11
 #define NUM_AB_and_F (NUM_Players + NUM_Fields)
 #define goalCoordY1 43
 #define goalCoordY2 51
