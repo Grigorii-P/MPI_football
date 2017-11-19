@@ -1,4 +1,3 @@
-//TODO: удалить ненужные библиотеки
 //TODO: нельзя использовать collective communication
 #include "mpi.h"
 #include <stdio.h>
@@ -6,14 +5,13 @@
 #include <stdlib.h>
 #include <ctime>
 #include <string.h>
-//#include "training.h"
 
 
 #define ROWS 64
 #define COLS 128
 #define ROW_BALL_INIT_POS ROWS/2
 #define COL_BALL_INIT_POS COLS/2
-#define NUM_ROUNDS 5
+#define NUM_ROUNDS 900
 #define NUM_STEPS 10
 
 // position of a player shifts for 1 cell

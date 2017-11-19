@@ -1,7 +1,4 @@
-//MARK: удалить ненужные библиотеки
 //MARK: комментить непрокомментенное
-//TODO: почему ранк 9 всегда получает мяч, но не бегает
-//TODO: мы выводим другую инфу !, отличную от training
 #include "mpi.h"
 #include <stdio.h>
 #include <cstdlib>
@@ -24,7 +21,7 @@
 #define goalCoordX1 0
 #define goalCoordX2 125
 #define HALF 2
-#define ROUNDS 50
+#define ROUNDS 2700
 
 void fill_ranks(int *newRanks, int flag);
 void assign_position(int *myPosition, int *myFieldSector, int rank, bool checkTeam, int half);
@@ -32,9 +29,9 @@ void assign_skills(int &speed, int &dribbling, int &kickPower, int rank);
 void assign_borders(int *myBoarders, int rank);
 bool is_ball_in_my_borders(int *myBorders, int *ballPosition);
 int get_field_index_with_ball(bool *ballPossessionIndex);
-void make_step(int *myPosition, int *myFieldSector, int speed, int *ballPosition, int &metersTotal);
-void identify_winner(int *allPlayersPositions_A, int *allPlayersPositions_B, int *ballPosition, int *winner, int *timesReachedBall_A, int *timesReachedBall_B, bool *reachedBall_A, bool *reachedBall_B);
-void choose_winner(int *ballChallengeA, int *ballChallengeB, int *winner, int *timesWonBall_A, int *timesWonBall_B, bool *wonBall_A, bool *wonBall_B);
+void make_step(int *myPosition, int *myFieldSector, int speed, int *ballPosition);
+void identify_winner(int *allPlayersPositions_A, int *allPlayersPositions_B, int *ballPosition, int *winner, bool *reachedBall_A, bool *reachedBall_B);
+void choose_winner(int *ballChallengeA, int *ballChallengeB, int *winner, bool *wonBall_A, bool *wonBall_B);
 bool did_win_ball(int *winner, int rank, int checkTeam);
 void kick_ball(int *ballPosition, int *myPosition, int *myFieldSector, int *allPlayersPositions, int goalXcoord, int *newBallPosition, int kickPower);
 void get_ball_position(int *newBallPositionsA, int *newBallPositionsB, int *ballPosition);
@@ -47,14 +44,9 @@ int main(int argc, char *argv[])  {
     int fieldWithBallIndex = -2;
     int goalXcoord = -1;
     int ballChallenge = -1;
-    int timesReachedBall_A[NUM_Players], timesReachedBall_B[NUM_Players];
-    int timesWonBall_A[NUM_Players], timesWonBall_B[NUM_Players];
-    int metersTotal = 0;
     bool checkTeam;
     bool IGotBall = false;
     bool didWinBall;
-    bool reachedBall_A[NUM_Players], reachedBall_B[NUM_Players];
-    bool wonBall_A[NUM_Players], wonBall_B[NUM_Players];
     
     int myPosition[2];
     int myFieldSector[4];
@@ -64,11 +56,12 @@ int main(int argc, char *argv[])  {
     int ballPosition[2] = {ROW_BALL_INIT_POS, COL_BALL_INIT_POS};
     int newBallPosition[] = {-1, -1}, newBallPositionsA[NUM_AB_and_F * 2], newBallPositionsB[NUM_AB_and_F * 2];
     int allPlayersPositions_A[NUM_AB_and_F * 2], allPlayersPositions_B[NUM_AB_and_F * 2];
-    int allPlayersMetersTotalA[NUM_AB_and_F * 2], allPlayersMetersTotalB[NUM_AB_and_F * 2];
     int winner[3]; // [0] - team/index, [1] - index, [3] - if battle (0/1)
     int ballChallengeA[NUM_AB_and_F], ballChallengeB[NUM_AB_and_F];
     int initialPlayersPositionsA[NUM_AB_and_F * 2], initialPlayersPositionsB[NUM_AB_and_F * 2];
     bool ballPossessionIndex[NUM_AB_and_F];
+    bool reachedBall_A[NUM_Players], reachedBall_B[NUM_Players];
+    bool wonBall_A[NUM_Players], wonBall_B[NUM_Players];
     
     MPI_Init(&argc,&argv);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -97,8 +90,6 @@ int main(int argc, char *argv[])  {
         MPI_Comm_rank(teamA_COMM, &rankA);
     if (teamB_COMM != MPI_COMM_NULL)
         MPI_Comm_rank(teamB_COMM, &rankB);
-//    if(fields_COMM != MPI_COMM_NULL)
-//        MPI_Comm_rank(fields_COMM, &rankF);
     if (teamAandFields_COMM != MPI_COMM_NULL)
         MPI_Comm_rank(teamAandFields_COMM, &rankAF);
     if (teamBandFields_COMM != MPI_COMM_NULL)
@@ -113,12 +104,10 @@ int main(int argc, char *argv[])  {
     
     if (rank >= NUM_Players * 2)
         assign_borders(myBorders, rank);
-
+    
+    // MARK: freopen
     if (rank == NUM_Players * 2) {
-        setToZeroInt(timesReachedBall_A, NUM_Players);
-        setToZeroInt(timesReachedBall_B, NUM_Players);
-        setToZeroInt(timesWonBall_A, NUM_Players);
-        setToZeroInt(timesWonBall_B, NUM_Players);
+        freopen ("output.txt","w",stdout);
     }
     
     // START OF THE MATCH
@@ -152,10 +141,8 @@ int main(int argc, char *argv[])  {
                 MPI_Gather(myPosition, 2, MPI_INT, initialPlayersPositionsB, 2, MPI_INT, NUM_Players, teamBandFields_COMM);
             
             // detect whether the ball is in my (I'm a field) borders
-            if (rank >= NUM_Players * 2) {
+            if (rank >= NUM_Players * 2)
                 IGotBall = is_ball_in_my_borders(myBorders, ballPosition);
-//                printf("rank %d, IGotBall = %d, ball position (%d,%d), myBorders (%d,%d,%d,%d)\n", rank, IGotBall, ballPosition[0], ballPosition[1], myBorders[0],myBorders[1],myBorders[2],myBorders[3]);
-            }
             
             // fields and players collect info on who possesses the ball
             if (teamAandFields_COMM != MPI_COMM_NULL)
@@ -166,25 +153,17 @@ int main(int argc, char *argv[])  {
 //                MPI_Allgather(&IGotBall, 1, MPI_CXX_BOOL, ballPossessionIndex, 1, MPI_CXX_BOOL, teamBandFields_COMM);
             
             // players receive the rank of a field with the ball
-            if (rankAF != -1) {
+            if (rankAF != -1)
                 fieldWithBallIndex = get_field_index_with_ball(ballPossessionIndex);
-//                printf("fieldWithBallIndex [%d]\n", fieldWithBallIndex);
-            }
-            if (rankBF != -1) {
+            if (rankBF != -1)
                 fieldWithBallIndex = get_field_index_with_ball(ballPossessionIndex);
-//                printf("fieldWithBallIndex [%d]\n", fieldWithBallIndex);
-            }
             
             // having 'fieldWithBallIndex' received, players know who they collect info on 'ballPosition' from;
             // players receive 'ballPosition'
-            if (teamAandFields_COMM != MPI_COMM_NULL) {
+            if (teamAandFields_COMM != MPI_COMM_NULL)
                 MPI_Bcast(ballPosition, 2, MPI_INT, fieldWithBallIndex, teamAandFields_COMM);
-//                printf("fieldWithBallIndex [%d]\n", fieldWithBallIndex);
-            }
-            if (teamBandFields_COMM != MPI_COMM_NULL) {
+            if (teamBandFields_COMM != MPI_COMM_NULL)
                 MPI_Bcast(ballPosition, 2, MPI_INT, fieldWithBallIndex, teamBandFields_COMM);
-//                printf("fieldWithBallIndex [%d]\n", fieldWithBallIndex);
-            }
             
             // FP0 (NUM_Players) collect players' positions, so each player can collect it afterwards to take further decision
             if (teamAandFields_COMM != MPI_COMM_NULL)
@@ -201,7 +180,7 @@ int main(int argc, char *argv[])  {
             // players take decision on what they do next - move or stay unmoved
             // если я добежал быстрее, мне все равно придется ждать остальных
             if (rank < NUM_Players * 2)
-                make_step(myPosition, myFieldSector, speed, ballPosition, metersTotal);
+                make_step(myPosition, myFieldSector, speed, ballPosition);
             
             // FP0 (rankAF/BF = NUM_Players) collects positions of all players in 'allPlayersPositionsA/B' arrays, so it can choose a winner
             if (teamAandFields_COMM != MPI_COMM_NULL)
@@ -223,8 +202,9 @@ int main(int argc, char *argv[])  {
             
             // FP0 identifies the index and the team of a winner
             if (rank == NUM_Players * 2) {
-                identify_winner(allPlayersPositions_A, allPlayersPositions_B, ballPosition, winner, timesReachedBall_A, timesReachedBall_B, reachedBall_A, reachedBall_B);
-                choose_winner(ballChallengeA, ballChallengeB, winner, timesWonBall_A, timesWonBall_B, wonBall_A, wonBall_B);
+                identify_winner(allPlayersPositions_A, allPlayersPositions_B, ballPosition, winner, reachedBall_A, reachedBall_B);
+                // chooses a winner between two candidates only
+                choose_winner(ballChallengeA, ballChallengeB, winner, wonBall_A, wonBall_B);
             }
             
             // send 'winners' arrays so that each player can detect if he is a winner; FP0 is 'NUM_Players'
@@ -261,11 +241,6 @@ int main(int argc, char *argv[])  {
                 MPI_Gather(newBallPosition, 2, MPI_INT, newBallPositionsA, 2, MPI_INT, NUM_Players, teamAandFields_COMM);
             if (teamBandFields_COMM != MPI_COMM_NULL)
                 MPI_Gather(newBallPosition, 2, MPI_INT, newBallPositionsB, 2, MPI_INT, NUM_Players, teamBandFields_COMM);
-            
-            if (teamAandFields_COMM != MPI_COMM_NULL)
-                MPI_Gather(&metersTotal, 1, MPI_INT, allPlayersMetersTotalA, 1, MPI_INT, NUM_Players, teamAandFields_COMM);
-            if (teamBandFields_COMM != MPI_COMM_NULL)
-                MPI_Gather(&metersTotal, 1, MPI_INT, allPlayersMetersTotalB, 1, MPI_INT, NUM_Players, teamBandFields_COMM);
                 
             
             // get the ball position for the next round
@@ -281,15 +256,13 @@ int main(int argc, char *argv[])  {
             
             
             if (rank == NUM_Players * 2) {
-                printf("ROUND %d -------------------\n",i);
-                printf("Team A (%d)\n",1);
-                printf("ball position after kick (%d,%d)\n", ballPosition[0], ballPosition[1]);
+                printf("%d\n",i);
+                printf("%d %d\n", ballPosition[1], ballPosition[0]);
                 for (int k = 0; k < NUM_Players; k++) {
-                    printf("rank %d, (%d,%d) (%d,%d) %d %d %d %d %d\n", k, initialPlayersPositionsA[k*2], initialPlayersPositionsA[k*2+1], allPlayersPositions_A[k*2], allPlayersPositions_A[k*2+1], reachedBall_A[k], wonBall_A[k], allPlayersMetersTotalA[k], timesReachedBall_A[k], timesWonBall_A[k]);
+                    printf("%d %d %d %d %d %d %d %d\n", k, initialPlayersPositionsA[k*2+1], initialPlayersPositionsA[k*2], allPlayersPositions_A[k*2+1], allPlayersPositions_A[k*2], reachedBall_A[k], wonBall_A[k], ballChallengeA[k]);
                 }
-                printf("Team B (%d)\n",0);
                 for (int k = 0; k < NUM_Players; k++) {
-                    printf("rank %d, (%d,%d) (%d,%d) %d %d %d %d %d\n", k, initialPlayersPositionsB[k*2], initialPlayersPositionsB[k*2+1], allPlayersPositions_B[k*2], allPlayersPositions_B[k*2+1], reachedBall_B[k], wonBall_B[k], allPlayersMetersTotalB[k], timesReachedBall_B[k], timesWonBall_B[k]);
+                    printf("%d %d %d %d %d %d %d %d\n", k, initialPlayersPositionsB[k*2+1], initialPlayersPositionsB[k*2], allPlayersPositions_B[k*2+1], allPlayersPositions_B[k*2], reachedBall_B[k], wonBall_B[k], ballChallengeB[k]);
                 }
             }
 
@@ -299,12 +272,11 @@ int main(int argc, char *argv[])  {
                 setToZeroBool(wonBall_A, NUM_Players);
                 setToZeroBool(wonBall_B, NUM_Players);
             }
-            
-            // TODO: нужен ли он здесь?
-            MPI_Barrier(MPI_COMM_WORLD);
         }
     }
     // END OF THE MATCH
+    // MARK: fclose
+    fclose (stdout);
     
     // lets free groups and communicators
     if(teamA_COMM != MPI_COMM_NULL)
@@ -389,64 +361,64 @@ void assign_position(int *myPosition, int *myFieldSector, int rank, bool checkTe
         row_shift = 4;
     
     // MARK: версия для 10 игроков
-    myPosition[0] = row_shift * 19;
-    myFieldSector[0] = myPosition[0];
-    myFieldSector[1] = myPosition[0] + (19-1);
-    if (row_shift == 4) {
-        myFieldSector[1] = myPosition[0] + 19;
-    }
-
-    if (!whichTeam && col_shift == 0) {
-        myPosition[1] = col_shift * 65;
-        myFieldSector[2] = myPosition[1];
-        myFieldSector[3] = myFieldSector[2] + 65;
-    }
-    if (!whichTeam && col_shift == 1) {
-        myPosition[1] = col_shift * 65;
-        myFieldSector[2] = myPosition[1];
-        myFieldSector[3] = myFieldSector[2] + 60;
-    }
-
-    if (whichTeam && col_shift == 0) {
-        myPosition[1] = col_shift * 60;
-        myFieldSector[2] = myPosition[1];
-        myFieldSector[3] = myFieldSector[2] + 60;
-    }
-    if (whichTeam && col_shift == 1) {
-        myPosition[1] = col_shift * 60;
-        myFieldSector[2] = myPosition[1];
-        myFieldSector[3] = myFieldSector[2] + 65;
-    }
+//    myPosition[0] = row_shift * 19;
+//    myFieldSector[0] = myPosition[0];
+//    myFieldSector[1] = myPosition[0] + (19-1);
+//    if (row_shift == 4) {
+//        myFieldSector[1] = myPosition[0] + 19;
+//    }
+//
+//    if (!whichTeam && col_shift == 0) {
+//        myPosition[1] = col_shift * 65;
+//        myFieldSector[2] = myPosition[1];
+//        myFieldSector[3] = myFieldSector[2] + 65;
+//    }
+//    if (!whichTeam && col_shift == 1) {
+//        myPosition[1] = col_shift * 65;
+//        myFieldSector[2] = myPosition[1];
+//        myFieldSector[3] = myFieldSector[2] + 60;
+//    }
+//
+//    if (whichTeam && col_shift == 0) {
+//        myPosition[1] = col_shift * 60;
+//        myFieldSector[2] = myPosition[1];
+//        myFieldSector[3] = myFieldSector[2] + 60;
+//    }
+//    if (whichTeam && col_shift == 1) {
+//        myPosition[1] = col_shift * 60;
+//        myFieldSector[2] = myPosition[1];
+//        myFieldSector[3] = myFieldSector[2] + 65;
+//    }
     
     // MARK: версия для 11 игроков
-//    if (rank != 10) {
-//        myPosition[0] = row_shift * 19;
-//        myPosition[1] = col_shift * 57 + shift;
-//        myFieldSector[0] = myPosition[0];
-//        myFieldSector[1] = myPosition[0] + (19-1);
-//        myFieldSector[2] = myPosition[1];
-//        myFieldSector[3] = myPosition[1] + (57-1);
-//
-//        if (row_shift == 4) {
-//            myFieldSector[1] = myPosition[0] + 19;
-//        }
-//    }
-//    else if (rank == 10 && whichTeam) {
-//        myPosition[0] = 0;
-//        myPosition[1] = 114;
-//        myFieldSector[0] = myPosition[0];
-//        myFieldSector[1] = 95;
-//        myFieldSector[2] = myPosition[1];
-//        myFieldSector[3] = 125;
-//    }
-//    else if (rank == 10 && !whichTeam) {
-//        myPosition[0] = 0;
-//        myPosition[1] = 0;
-//        myFieldSector[0] = myPosition[0];
-//        myFieldSector[1] = 95;
-//        myFieldSector[2] = myPosition[1];
-//        myFieldSector[3] = 12-1;
-//    }
+    if (rank != 10) {
+        myPosition[0] = row_shift * 19;
+        myPosition[1] = col_shift * 57 + shift;
+        myFieldSector[0] = myPosition[0];
+        myFieldSector[1] = myPosition[0] + (19-1);
+        myFieldSector[2] = myPosition[1];
+        myFieldSector[3] = myPosition[1] + (57-1);
+
+        if (row_shift == 4) {
+            myFieldSector[1] = myPosition[0] + 19;
+        }
+    }
+    else if (rank == 10 && whichTeam) {
+        myPosition[0] = 0;
+        myPosition[1] = 114;
+        myFieldSector[0] = myPosition[0];
+        myFieldSector[1] = 95;
+        myFieldSector[2] = myPosition[1];
+        myFieldSector[3] = 125;
+    }
+    else if (rank == 10 && !whichTeam) {
+        myPosition[0] = 0;
+        myPosition[1] = 0;
+        myFieldSector[0] = myPosition[0];
+        myFieldSector[1] = 95;
+        myFieldSector[2] = myPosition[1];
+        myFieldSector[3] = 12-1;
+    }
 }
 
 void assign_skills(int &speed, int &dribbling, int &kickPower, int rank) {
@@ -454,7 +426,6 @@ void assign_skills(int &speed, int &dribbling, int &kickPower, int rank) {
     speed = (rand() % 10) + 1;
     srand(rank + rand());
     dribbling = (rand() % (15-speed)) + 1;
-//    dribbling = rand() % 10 + 1;
     kickPower = 15 - speed - dribbling;
 }
 
@@ -494,12 +465,10 @@ int get_field_index_with_ball(bool *ballPossessionIndex) {
             break;
         }
     }
-//    if (ind == -1)
-//        printf("\nIND %d\n", -1);
     return ind;
 }
 
-void make_step(int *myPosition, int *myFieldSector, int speed, int *ballPosition, int &metersTotal) {
+void make_step(int *myPosition, int *myFieldSector, int speed, int *ballPosition) {
     if (is_ball_in_my_borders(myFieldSector, ballPosition)) {
         int row_offset = ballPosition[0]-myPosition[0];
         int col_offset = ballPosition[1]-myPosition[1];
@@ -510,27 +479,23 @@ void make_step(int *myPosition, int *myFieldSector, int speed, int *ballPosition
         else {
             if (abs(row_offset) <= speed) {
                 myPosition[0] += row_offset;
-                metersTotal += abs(row_offset);
             }
             else {
                 if (row_offset < 0)
                     myPosition[0] += -1 * speed;
                 else
                     myPosition[0] += speed;
-                metersTotal += speed;
             }
             
             if (speed - abs(row_offset) > 0) {
                 if (abs(col_offset) <= abs(speed - abs(row_offset))) {
                     myPosition[1] += col_offset;
-                    metersTotal += abs(col_offset);
                 }
                 else {
                     if (col_offset < 0)
                         myPosition[1] += -1 * abs(speed - abs(row_offset));
                     else
                         myPosition[1] += speed - abs(row_offset);
-                    metersTotal += speed - abs(row_offset);
                 }
             }
         }
@@ -541,7 +506,7 @@ bool are_positions_equal(int *a, int *b) {
     return (a[0] == b[0] && a[1] == b[1]);
 }
 
-void identify_winner(int *allPlayersPositions_A, int *allPlayersPositions_B, int *ballPosition, int *winner, int *timesReachedBall_A, int *timesReachedBall_B, bool *reachedBall_A, bool *reachedBall_B) {
+void identify_winner(int *allPlayersPositions_A, int *allPlayersPositions_B, int *ballPosition, int *winner, bool *reachedBall_A, bool *reachedBall_B) {
     int count = 0, indA = -1, indB = -1;
     // choose the very first player while iterating because there might be only one player from a team holding the ball at the moment since each of them holds its own sector
     for (int i = 0; i < NUM_Players; i++) {
@@ -549,7 +514,6 @@ void identify_winner(int *allPlayersPositions_A, int *allPlayersPositions_B, int
             count++;
             indA = i;
             reachedBall_A[i] = true;
-            timesReachedBall_A[i] += 1;
             break;
         }
     }
@@ -558,7 +522,6 @@ void identify_winner(int *allPlayersPositions_A, int *allPlayersPositions_B, int
             count++;
             indB = i;
             reachedBall_B[i] = true;
-            timesReachedBall_B[i] += 1;
             break;
         }
     }
@@ -584,33 +547,31 @@ void identify_winner(int *allPlayersPositions_A, int *allPlayersPositions_B, int
     }
 }
 
-void choose_winner(int *ballChallengeA, int *ballChallengeB, int *winner, int *timesWonBall_A, int *timesWonBall_B, bool *wonBall_A, bool *wonBall_B) {
+void choose_winner(int *ballChallengeA, int *ballChallengeB, int *winner, bool *wonBall_A, bool *wonBall_B) {
     int a = 0, b = 0, va = 0, vb = 0, luck;
-    for (int i = 0; i < NUM_Players; i++) {
-        if (ballChallengeA[i] != -1) {
-            a = i;
-            va = ballChallengeA[i];
-        }
-    }
-    for (int i = 0; i < NUM_Players; i++) {
-        if (ballChallengeB[i] != -1) {
-            b = i;
-            vb = ballChallengeB[i];
+    // if winner[2] = -1, we don't change winner at all and delete all ballChellenges previously collected
+    if (winner[2] == -1) {
+        for (int i = 0; i < NUM_Players; i++) {
+            ballChallengeA[i] = -1;
+            ballChallengeB[i] = -1;
         }
     }
     
     if (winner[2] == 1) {
+        a = winner[0];
+        va = ballChallengeA[a];
+        b = winner[1];
+        vb = ballChallengeB[b];
+        
         if (va > vb) {
             winner[0] = 1;
             winner[1] = a;
             wonBall_A[a] = true;
-            timesWonBall_A[a] += 1;
         }
         else if (va < vb) {
             winner[0] = 0;
             winner[1] = b;
             wonBall_B[b] = true;
-            timesWonBall_B[b] += 1;
         }
         else {
             srand(time(0));
@@ -619,17 +580,22 @@ void choose_winner(int *ballChallengeA, int *ballChallengeB, int *winner, int *t
                 winner[0] = 1;
                 winner[1] = a;
                 wonBall_A[a] = true;
-                timesWonBall_A[a] += 1;
             }
             else if (luck == 0) {
                 winner[0] = 0;
                 winner[1] = b;
                 wonBall_B[b] = true;
-                timesWonBall_B[b] += 1;
             }
         }
+        // make ballChallenge of losers equal to -1
+        for (int i = 0; i < NUM_Players; i++) {
+            ballChallengeA[i] = -1;
+            ballChallengeB[i] = -1;
+        }
+        // and leave only those who reached the ball
+        ballChallengeA[a] = va;
+        ballChallengeB[b] = vb;
     }
-    // if winner[2] = -1, we don't change winner at all
 }
 
 bool did_win_ball(int *winner, int rank, int checkTeam) {
@@ -645,13 +611,8 @@ int manhattanDist(int *A, int *B) {
 
 void kick_towards(int *kickBallTo, int *ballPosition, int *newBallPosition, int kickPower) {
     int kick = kickPower * 2;
-//    printf("kick %d\n", kick);
-//    printf("ballPosition (%d,%d)\n", ballPosition[0],ballPosition[1]);
-//    printf("kickBallTo (%d,%d)\n", kickBallTo[0],kickBallTo[1]);
     int row_offset = kickBallTo[0]-ballPosition[0];
     int col_offset = kickBallTo[1]-ballPosition[1];
-//    printf("row_offset %d\n", row_offset);
-//    printf("col_offset %d\n", col_offset);
     if (abs(row_offset) + abs(col_offset) <= kick) {
         newBallPosition[0] = kickBallTo[0];
         newBallPosition[1] = kickBallTo[1];
@@ -679,7 +640,6 @@ void kick_towards(int *kickBallTo, int *ballPosition, int *newBallPosition, int 
         else
             newBallPosition[1] = ballPosition[1];
     }
-//    printf("newBallPosition (%d,%d)\n", newBallPosition[0],newBallPosition[1]);
 }
 
 void kick_ball(int *ballPosition, int *myPosition, int *myFieldSector, int *allPlayersPositions, int goalXcoord, int *newBallPosition, int kickPower) {
@@ -707,7 +667,6 @@ void kick_ball(int *ballPosition, int *myPosition, int *myFieldSector, int *allP
             }
         }
         if (closest[0] != -1) {
-//            printf("closest before (%d,%d)\n", closest[0],closest[1]);
             if (closest[1] < distToTarget) {
                 kickBallTo[0] = allPlayersPositions[closest[0] * 2];
                 kickBallTo[1] = allPlayersPositions[closest[0] * 2 + 1];
@@ -749,7 +708,6 @@ void kick_ball(int *ballPosition, int *myPosition, int *myFieldSector, int *allP
             kickBallTo[1] = goalPoint[1];
         }
     }
-//    printf("closest after (%d,%d), GOALPOINT IS (%d,%d), KICKBALLTO IS (%d,%d)\n",closest[0],closest[1],goalPoint[0],goalPoint[1],kickBallTo[0],kickBallTo[1]);
     kick_towards(kickBallTo, ballPosition, newBallPosition, kickPower);
 }
 
@@ -773,11 +731,6 @@ void get_ball_position(int *newBallPositionsA, int *newBallPositionsB, int *ball
             ballPosition[1] = COL_BALL_INIT_POS;
         }
     }
-//    bool a = ballPosition[0] <= goalCoordY2;
-//    bool b = ballPosition[0] >= goalCoordY1;
-//    bool c = ballPosition[1] == goalCoordX1;
-//    bool d = ballPosition[1] == goalCoordX2;
-//    printf("CONDITIONS ARE (%d %d %d %d)\n", a,b,c,d);
 }
 
 void setToZeroBool(bool *a, int n) {
