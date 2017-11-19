@@ -1,7 +1,7 @@
 //MARK: удалить ненужные библиотеки
 //MARK: комментить непрокомментенное
 //TODO: почему ранк 9 всегда получает мяч, но не бегает
-//TODO: добавить счет
+//TODO: мы выводим другую инфу !, отличную от training
 #include "mpi.h"
 #include <stdio.h>
 #include <cstdlib>
@@ -159,11 +159,11 @@ int main(int argc, char *argv[])  {
             
             // fields and players collect info on who possesses the ball
             if (teamAandFields_COMM != MPI_COMM_NULL)
-//                MPI_Allgather(&IGotBall, 1, MPI_INT, ballPossessionIndex, 1, MPI_INT, teamAandFields_COMM);
-                MPI_Allgather(&IGotBall, 1, MPI_CXX_BOOL, ballPossessionIndex, 1, MPI_CXX_BOOL, teamAandFields_COMM);
+                MPI_Allgather(&IGotBall, 1, MPI_C_BOOL, ballPossessionIndex, 1, MPI_C_BOOL, teamAandFields_COMM);
+//                MPI_Allgather(&IGotBall, 1, MPI_CXX_BOOL, ballPossessionIndex, 1, MPI_CXX_BOOL, teamAandFields_COMM);
             if (teamBandFields_COMM != MPI_COMM_NULL)
-//                MPI_Allgather(&IGotBall, 1, MPI_INT, ballPossessionIndex, 1, MPI_INT, teamBandFields_COMM);
-                MPI_Allgather(&IGotBall, 1, MPI_CXX_BOOL, ballPossessionIndex, 1, MPI_CXX_BOOL, teamBandFields_COMM);
+                MPI_Allgather(&IGotBall, 1, MPI_C_BOOL, ballPossessionIndex, 1, MPI_C_BOOL, teamBandFields_COMM);
+//                MPI_Allgather(&IGotBall, 1, MPI_CXX_BOOL, ballPossessionIndex, 1, MPI_CXX_BOOL, teamBandFields_COMM);
             
             // players receive the rank of a field with the ball
             if (rankAF != -1) {
@@ -228,14 +228,14 @@ int main(int argc, char *argv[])  {
             }
             
             // send 'winners' arrays so that each player can detect if he is a winner; FP0 is 'NUM_Players'
-            if (teamAandFields_COMM != MPI_COMM_NULL)
-                MPI_Bcast(winner, NUM_Players, MPI_CXX_BOOL, NUM_Players, teamAandFields_COMM);
-            if (teamBandFields_COMM != MPI_COMM_NULL)
-                MPI_Bcast(winner, NUM_Players, MPI_CXX_BOOL, NUM_Players, teamBandFields_COMM);
 //            if (teamAandFields_COMM != MPI_COMM_NULL)
-//                MPI_Bcast(winner, NUM_Players, MPI_INT, NUM_Players, teamAandFields_COMM);
+//                MPI_Bcast(winner, NUM_Players, MPI_CXX_BOOL, NUM_Players, teamAandFields_COMM);
 //            if (teamBandFields_COMM != MPI_COMM_NULL)
-//                MPI_Bcast(winner, NUM_Players, MPI_INT, NUM_Players, teamBandFields_COMM);
+//                MPI_Bcast(winner, NUM_Players, MPI_CXX_BOOL, NUM_Players, teamBandFields_COMM);
+            if (teamAandFields_COMM != MPI_COMM_NULL)
+                MPI_Bcast(winner, NUM_Players, MPI_C_BOOL, NUM_Players, teamAandFields_COMM);
+            if (teamBandFields_COMM != MPI_COMM_NULL)
+                MPI_Bcast(winner, NUM_Players, MPI_C_BOOL, NUM_Players, teamBandFields_COMM);
             
             // if a player wins the ball, he kicks it to a certain position or gives a pass
             if (rankA != -1) {
