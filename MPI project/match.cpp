@@ -389,64 +389,64 @@ void assign_position(int *myPosition, int *myFieldSector, int rank, bool checkTe
         row_shift = 4;
     
     // MARK: версия для 10 игроков
-//    myPosition[0] = row_shift * 19;
-//    myFieldSector[0] = myPosition[0];
-//    myFieldSector[1] = myPosition[0] + (19-1);
-//    if (row_shift == 4) {
-//        myFieldSector[1] = myPosition[0] + 19;
-//    }
-//
-//    if (!whichTeam && col_shift == 0) {
-//        myPosition[1] = col_shift * 65;
-//        myFieldSector[2] = myPosition[1];
-//        myFieldSector[3] = myFieldSector[2] + 65;
-//    }
-//    if (!whichTeam && col_shift == 1) {
-//        myPosition[1] = col_shift * 65;
-//        myFieldSector[2] = myPosition[1];
-//        myFieldSector[3] = myFieldSector[2] + 60;
-//    }
-//
-//    if (whichTeam && col_shift == 0) {
-//        myPosition[1] = col_shift * 60;
-//        myFieldSector[2] = myPosition[1];
-//        myFieldSector[3] = myFieldSector[2] + 60;
-//    }
-//    if (whichTeam && col_shift == 1) {
-//        myPosition[1] = col_shift * 60;
-//        myFieldSector[2] = myPosition[1];
-//        myFieldSector[3] = myFieldSector[2] + 65;
-//    }
+    myPosition[0] = row_shift * 19;
+    myFieldSector[0] = myPosition[0];
+    myFieldSector[1] = myPosition[0] + (19-1);
+    if (row_shift == 4) {
+        myFieldSector[1] = myPosition[0] + 19;
+    }
+
+    if (!whichTeam && col_shift == 0) {
+        myPosition[1] = col_shift * 65;
+        myFieldSector[2] = myPosition[1];
+        myFieldSector[3] = myFieldSector[2] + 65;
+    }
+    if (!whichTeam && col_shift == 1) {
+        myPosition[1] = col_shift * 65;
+        myFieldSector[2] = myPosition[1];
+        myFieldSector[3] = myFieldSector[2] + 60;
+    }
+
+    if (whichTeam && col_shift == 0) {
+        myPosition[1] = col_shift * 60;
+        myFieldSector[2] = myPosition[1];
+        myFieldSector[3] = myFieldSector[2] + 60;
+    }
+    if (whichTeam && col_shift == 1) {
+        myPosition[1] = col_shift * 60;
+        myFieldSector[2] = myPosition[1];
+        myFieldSector[3] = myFieldSector[2] + 65;
+    }
     
     // MARK: версия для 11 игроков
-    if (rank != 10) {
-        myPosition[0] = row_shift * 19;
-        myPosition[1] = col_shift * 57 + shift;
-        myFieldSector[0] = myPosition[0];
-        myFieldSector[1] = myPosition[0] + (19-1);
-        myFieldSector[2] = myPosition[1];
-        myFieldSector[3] = myPosition[1] + (57-1);
-
-        if (row_shift == 4) {
-            myFieldSector[1] = myPosition[0] + 19;
-        }
-    }
-    else if (rank == 10 && whichTeam) {
-        myPosition[0] = 0;
-        myPosition[1] = 114;
-        myFieldSector[0] = myPosition[0];
-        myFieldSector[1] = 95;
-        myFieldSector[2] = myPosition[1];
-        myFieldSector[3] = 125;
-    }
-    else if (rank == 10 && !whichTeam) {
-        myPosition[0] = 0;
-        myPosition[1] = 0;
-        myFieldSector[0] = myPosition[0];
-        myFieldSector[1] = 95;
-        myFieldSector[2] = myPosition[1];
-        myFieldSector[3] = 12-1;
-    }
+//    if (rank != 10) {
+//        myPosition[0] = row_shift * 19;
+//        myPosition[1] = col_shift * 57 + shift;
+//        myFieldSector[0] = myPosition[0];
+//        myFieldSector[1] = myPosition[0] + (19-1);
+//        myFieldSector[2] = myPosition[1];
+//        myFieldSector[3] = myPosition[1] + (57-1);
+//
+//        if (row_shift == 4) {
+//            myFieldSector[1] = myPosition[0] + 19;
+//        }
+//    }
+//    else if (rank == 10 && whichTeam) {
+//        myPosition[0] = 0;
+//        myPosition[1] = 114;
+//        myFieldSector[0] = myPosition[0];
+//        myFieldSector[1] = 95;
+//        myFieldSector[2] = myPosition[1];
+//        myFieldSector[3] = 125;
+//    }
+//    else if (rank == 10 && !whichTeam) {
+//        myPosition[0] = 0;
+//        myPosition[1] = 0;
+//        myFieldSector[0] = myPosition[0];
+//        myFieldSector[1] = 95;
+//        myFieldSector[2] = myPosition[1];
+//        myFieldSector[3] = 12-1;
+//    }
 }
 
 void assign_skills(int &speed, int &dribbling, int &kickPower, int rank) {
